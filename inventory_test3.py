@@ -138,10 +138,9 @@ st.dataframe(
     use_container_width=True
 )
     
-# Total value of all low-stock items
-total_low_stock_value = low_stock_df["Total Value (RM)"].sum()
-st.metric("💸 Total Low Stock Value", f"RM{total_low_stock_value:,.2f}")
-
+# Show total cost for restocking all low stock items
+total_restock_value = low_stock_df["Restock Value (RM)"].sum()
+st.metric("💸 Total Restock Cost", f"RM{total_restock_value:,.2f}")
 
 
 # Gradient coloring for Stock column
