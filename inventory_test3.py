@@ -122,10 +122,21 @@ with col5:
 
 # --- Low stock alert table ---
 st.subheader("⚠️ Low Stock Alert")
-low_stock_df = filtered_df[filtered_df["Stock"] < 5].copy()
-low_stock_df["Total Value (RM)"] = low_stock_df["Stock"] * low_stock_df["Price"]
+RESTOCK_TARGET = 5
+low_stock_df = filtered_df[filtered_df["Stock"] < RESTOCK_TARGET].copy()
 
+# Calculate only the units needed to reach target
+low_stock_df["Restock Quantity"] = RESTOCK_TARGET - low_stock_df["Stock"]
 
+# Optional: calculate total restock cost
+low_stock_df["Restock Value (RM)"] = low_stock_df["Restock Quantity"] * low_stock_df["Price"]
+
+# Show only Restock Quantity and relevant info in table
+st.subheader("⚠️ Low Stock Alert")
+st.dataframe(
+    low_stock_df[["Item", "Category", "Restock Quantity", "Price", "Restock Value (RM)"]],
+    use_container_width=True
+    
 # Total value of all low-stock items
 total_low_stock_value = low_stock_df["Total Value (RM)"].sum()
 st.metric("💸 Total Low Stock Value", f"RM{total_low_stock_value:,.2f}")
