@@ -141,5 +141,21 @@ st.dataframe(
 total_restock_value = low_stock_df["Restock Value (RM)"].sum()
 st.metric("💸 Total Restock Cost", f"RM{total_restock_value:,.2f}")
 
+# Gradient coloring function for urgency (optional)
+def color_restock(val):
+    if val >= 5:
+        color = 'background-color: #ff4c4c; color: white'  # red for large restock
+    elif val >= 3:
+        color = 'background-color: #ffb347; color: black'  # orange for medium
+    else:
+        color = 'background-color: #ffff66; color: black'  # yellow for small
+    return color
+
+# Display the table with only the restock quantity and relevant info
+st.dataframe(
+    low_stock_df[["Item", "Category", "Restock Quantity", "Price", "Restock Value (RM)"]]
+    .style.applymap(color_restock, subset=["Restock Quantity"]),
+    use_container_width=True
+)
 
 
