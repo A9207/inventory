@@ -120,24 +120,23 @@ with col5:
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-# --- Low stock alert table ---
+
+# --- Low Stock Alert Section (Restock Needed) ---
+st.subheader("⚠️ Low Stock Alert")
+
+# Define the target stock level for each item
 RESTOCK_TARGET = 5
+
+# Filter items that are below the target
 low_stock_df = filtered_df[filtered_df["Stock"] < RESTOCK_TARGET].copy()
 
-# Calculate only the units needed to reach target
+# Calculate the restock quantity needed
 low_stock_df["Restock Quantity"] = RESTOCK_TARGET - low_stock_df["Stock"]
 
-# Optional: calculate total restock cost
+# Calculate total value for the restock quantity
 low_stock_df["Restock Value (RM)"] = low_stock_df["Restock Quantity"] * low_stock_df["Price"]
 
-# Show only Restock Quantity and relevant info in table
-st.subheader("⚠️ Low Stock Alert")
-st.dataframe(
-    low_stock_df[["Item", "Category", "Restock Quantity", "Price", "Restock Value (RM)"]],
-    use_container_width=True
-)
-    
-# Show total cost for restocking all low stock items
+# Show total restock cost as a KPI
 total_restock_value = low_stock_df["Restock Value (RM)"].sum()
 st.metric("💸 Total Restock Cost", f"RM{total_restock_value:,.2f}")
 
@@ -157,5 +156,4 @@ st.dataframe(
     .style.applymap(color_restock, subset=["Restock Quantity"]),
     use_container_width=True
 )
-
 
