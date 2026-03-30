@@ -121,7 +121,7 @@ with col5:
     st.plotly_chart(fig2, use_container_width=True)
 
 # --- Low stock alert table ---
-st.subheader("⚠️ Low Stock Alert")
+st.subheader("⚠️ Low Alert")
 RESTOCK_TARGET = 5
 low_stock_df = filtered_df[filtered_df["Stock"] < RESTOCK_TARGET].copy()
 
