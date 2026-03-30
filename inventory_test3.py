@@ -154,8 +154,8 @@ def color_stock(val):
     return color
 
 st.dataframe(
-    low_stock_df[["Item", "Category", "Stock", "Price", "Restock Value (RM)"]]
-    .style.applymap(color_stock, subset=["Stock"]),
+    low_stock_df[["Item", "Category", "Restock Quantity", "Price", "Restock Value (RM)"]]
+    .style.applymap(color_stock, subset=["Restock Quantity"]),
     use_container_width=True
 )
 
