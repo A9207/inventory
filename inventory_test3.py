@@ -136,6 +136,7 @@ st.subheader("⚠️ Low Stock Alert")
 st.dataframe(
     low_stock_df[["Item", "Category", "Restock Quantity", "Price", "Restock Value (RM)"]],
     use_container_width=True
+)
     
 # Total value of all low-stock items
 total_low_stock_value = low_stock_df["Total Value (RM)"].sum()
