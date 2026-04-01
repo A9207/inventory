@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import os
 
-FILE = "inventory.csv"
+FILE = "inventory.xlsx"
 
 # --- Page setup ---
 st.set_page_config(page_title="Inventory Dashboard", layout="wide")
@@ -31,7 +31,7 @@ st.title("📦 DCD Maintenance Inventory Dashboard")
 
 # --- Load inventory ---
 if os.path.exists(FILE):
-    df = pd.read_csv(FILE)
+    df = pd.read_excel(FILE)
 else:
     df = pd.DataFrame({
         "Item": ["kv N-24DR", "Blue wire", "Circuit breaker"],
@@ -75,7 +75,7 @@ edited_df = st.data_editor(
 # --- Auto-save any changes ---
 if not edited_df.equals(st.session_state.inventory):
     st.session_state.inventory = edited_df
-    edited_df.to_csv(FILE, index=False)
+    edited_df.to_excel(FILE, index=False)
     st.success("✅ Changes saved automatically!")
 
 # --- Calculate inventory value ---
