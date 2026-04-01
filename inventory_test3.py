@@ -39,7 +39,7 @@ else:
         "Stock": [3, 2, 85],
         "Price": [1200, 25.00, 45]
     })
-    df.to_csv(FILE, index=False)
+    df.to_excel(FILE, index=False)
 
 # --- Ensure session state exists ---
 if "inventory" not in st.session_state:
