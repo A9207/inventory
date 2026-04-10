@@ -2,9 +2,47 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import os
+from github import Github
+import base64
+from io import BytesIO
 
-FILE = "inventory.xlsx"
+# 🔐 GitHub token (SAFE WAY)
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
+# --- GitHub Config ---
+GITHUB_TOKEN = "your_token_here"
+REPO_NAME = "yourusername/yourrepo"
+FILE_PATH = "inventory.xlsx"
+
+g = Github(GITHUB_TOKEN)
+repo = g.get_repo(REPO_NAME)
+
+# --- Load from GitHub ---
+def load_data():
+    try:
+        file = repo.get_contents(FILE_PATH)
+        content = base64.b64decode(file.content)
+        df = pd.read_excel(BytesIO(content))
+        return df, file.sha
+    except:
+        df = pd.DataFrame({
+            "Item": [],
+            "Category": [],
+            "Stock": [],
+            "Price": []
+        })
+        return df, None
+
+# --- Save to GitHub ---
+def save_data(df, sha):
+    buffer = BytesIO()
+    df.to_excel(buffer, index=False)
+    content = base64.b64encode(buffer.getvalue()).decode()
+
+    if sha:
+        repo.update_file(FILE_PATH, "Update inventory", content, sha)
+    else:
+        repo.create_file(FILE_PATH, "Create inventory", content)
 # --- Page setup ---
 st.set_page_config(page_title="Inventory Dashboard", layout="wide")
 
@@ -30,18 +68,11 @@ h1, h2, h3 {
 st.title("📦 DCD Maintenance Inventory Dashboard")
 
 # --- Load inventory ---
-if os.path.exists(FILE):
-    df = pd.read_excel(FILE)
-else:
-    df = pd.DataFrame({
-        "Item": ["kv N-24DR", "Blue wire", "Circuit breaker"],
-        "Category": ["Keyence", "Smc", "Sanwa"],
-        "Stock": [3, 2, 85],
-        "Price": [1200, 25.00, 45]
-    })
-    df.to_excel(FILE, index=False)
+
 
 # --- Ensure session state exists ---
+df, sha = load_data()
+
 if "inventory" not in st.session_state:
     st.session_state.inventory = df.copy()
 
@@ -75,8 +106,8 @@ edited_df = st.data_editor(
 # --- Auto-save any changes ---
 if not edited_df.equals(st.session_state.inventory):
     st.session_state.inventory = edited_df
-    edited_df.to_excel(FILE, index=False)
-    st.success("✅ Changes saved automatically!")
+    save_data(edited_df, sha)
+    st.success("✅ Saved to GitHub!")
 
 # --- Calculate inventory value ---
 df["Value"] = df["Stock"] * df["Price"]
