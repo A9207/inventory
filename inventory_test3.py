@@ -10,7 +10,6 @@ from io import BytesIO
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 # --- GitHub Config ---
-GITHUB_TOKEN = "your_token_here"
 REPO_NAME = "yourusername/yourrepo"
 FILE_PATH = "inventory.xlsx"
 
@@ -107,6 +106,9 @@ edited_df = st.data_editor(
 if not edited_df.equals(st.session_state.inventory):
     st.session_state.inventory = edited_df
     save_data(edited_df, sha)
+
+    # reload latest file after saving
+    df, sha = load_data()
     st.success("✅ Saved to GitHub!")
 
 # --- Calculate inventory value ---
