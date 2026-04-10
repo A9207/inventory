@@ -6,23 +6,28 @@ from github import Github
 import base64
 from io import BytesIO
 
-# 🔐 GitHub token (SAFE WAY)
+# =========================
+# 🔐 GITHUB CONFIG
+# =========================
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-
-# --- GitHub Config ---
-REPO_NAME = "yourusername/yourrepo"
+REPO_NAME = "yourusername/yourrepo"   # 👈 CHANGE THIS
 FILE_PATH = "inventory.xlsx"
 
 g = Github(GITHUB_TOKEN)
 repo = g.get_repo(REPO_NAME)
 
-# --- Load from GitHub ---
+
+# =========================
+# 📥 LOAD FROM GITHUB
+# =========================
 def load_data():
     try:
         file = repo.get_contents(FILE_PATH)
         content = base64.b64decode(file.content)
+
         df = pd.read_excel(BytesIO(content))
         return df, file.sha
+
     except:
         df = pd.DataFrame({
             "Item": [],
@@ -32,20 +37,38 @@ def load_data():
         })
         return df, None
 
-# --- Save to GitHub ---
+
+# =========================
+# 💾 SAVE TO GITHUB
+# =========================
 def save_data(df, sha):
     buffer = BytesIO()
     df.to_excel(buffer, index=False)
     content = base64.b64encode(buffer.getvalue()).decode()
 
-    if sha:
-        repo.update_file(FILE_PATH, "Update inventory", content, sha)
-    else:
-        repo.create_file(FILE_PATH, "Create inventory", content)
-# --- Page setup ---
+    try:
+        if sha:
+            repo.update_file(
+                FILE_PATH,
+                "Update inventory",
+                content,
+                sha
+            )
+        else:
+            repo.create_file(
+                FILE_PATH,
+                "Create inventory",
+                content
+            )
+    except Exception as e:
+        st.error(f"GitHub Save Error: {e}")
+
+
+# =========================
+# ⚙️ STREAMLIT SETUP
+# =========================
 st.set_page_config(page_title="Inventory Dashboard", layout="wide")
 
-# Futuristic CSS
 st.markdown("""
 <style>
 body {
@@ -56,7 +79,6 @@ body {
     background: linear-gradient(135deg, #0e1117, #1a1f2b);
     padding: 15px;
     border-radius: 15px;
-    backdrop-filter: blur(12px);
 }
 h1, h2, h3 {
     color: #00f5ff;
@@ -66,21 +88,36 @@ h1, h2, h3 {
 
 st.title("📦 DCD Maintenance Inventory Dashboard")
 
-# --- Load inventory ---
 
-
-# --- Ensure session state exists ---
+# =========================
+# 📥 LOAD DATA
+# =========================
 df, sha = load_data()
 
 if "inventory" not in st.session_state:
     st.session_state.inventory = df.copy()
 
-# Ensure Price is float
-st.session_state.inventory["Price"] = st.session_state.inventory["Price"].astype(float)
 
-df = st.session_state.inventory
+# =========================
+# 🧠 SAFE DATA CLEANING
+# =========================
+st.session_state.inventory["Price"] = pd.to_numeric(
+    st.session_state.inventory["Price"],
+    errors="coerce"
+).fillna(0)
 
-# --- Editable table ---
+st.session_state.inventory["Stock"] = pd.to_numeric(
+    st.session_state.inventory["Stock"],
+    errors="coerce"
+).fillna(0)
+
+
+df = st.session_state.inventory.copy()
+
+
+# =========================
+# ✏️ EDITOR
+# =========================
 st.subheader("✏️ Manage Inventory")
 
 edited_df = st.data_editor(
@@ -102,34 +139,58 @@ edited_df = st.data_editor(
     key="inventory_editor"
 )
 
-# --- Auto-save any changes ---
-if not edited_df.equals(st.session_state.inventory):
-    st.session_state.inventory = edited_df
-    save_data(edited_df, sha)
 
-    # reload latest file after saving
-    df, sha = load_data()
+# =========================
+# 💾 AUTO SAVE
+# =========================
+if not edited_df.equals(st.session_state.inventory):
+    st.session_state.inventory = edited_df.copy()
+    save_data(edited_df, sha)
     st.success("✅ Saved to GitHub!")
 
-# --- Calculate inventory value ---
-df["Value"] = df["Stock"] * df["Price"]
 
-# --- Sidebar filters ---
+# =========================
+# 📊 CALCULATIONS
+# =========================
+if not df.empty:
+    df["Value"] = df["Stock"] * df["Price"]
+else:
+    df["Value"] = 0
+
+
+# =========================
+# 🔍 FILTERS
+# =========================
 st.sidebar.title("⚙️ Filters")
-category = st.sidebar.multiselect("Select Category", df["Category"], default=df["Category"])
-filtered_df = df[df["Category"].isin(category)]
 
-# --- KPIs ---
+categories = df["Category"].dropna().unique()
+
+selected_category = st.sidebar.multiselect(
+    "Select Category",
+    categories,
+    default=categories
+)
+
+filtered_df = df[df["Category"].isin(selected_category)]
+
+
+# =========================
+# 📊 KPI METRICS
+# =========================
 total_items = filtered_df["Stock"].sum()
 total_value = filtered_df["Value"].sum()
 low_stock_count = filtered_df[filtered_df["Stock"] < 5].shape[0]
 
 col1, col2, col3 = st.columns(3)
+
 col1.metric("📦 Total Items", total_items)
 col2.metric("💰 Inventory Value", f"RM{total_value:,.2f}")
 col3.metric("⚠️ Low Stock Items", low_stock_count)
 
-# --- Charts ---
+
+# =========================
+# 📈 CHARTS
+# =========================
 col4, col5 = st.columns(2)
 
 with col4:
@@ -154,24 +215,30 @@ with col5:
     st.plotly_chart(fig2, use_container_width=True)
 
 
-# --- Low stock alert table ---
+# =========================
+# ⚠️ LOW STOCK
+# =========================
 RESTOCK_TARGET = 5
+
 low_stock_df = filtered_df[filtered_df["Stock"] < RESTOCK_TARGET].copy()
 
-# Calculate only the units needed to reach target
-low_stock_df["Restock Quantity"] = RESTOCK_TARGET - low_stock_df["Stock"]
+if not low_stock_df.empty:
+    low_stock_df["Restock Quantity"] = RESTOCK_TARGET - low_stock_df["Stock"]
+    low_stock_df["Restock Value (RM)"] = (
+        low_stock_df["Restock Quantity"] * low_stock_df["Price"]
+    )
 
-# Optional: calculate total restock cost
-low_stock_df["Restock Value (RM)"] = low_stock_df["Restock Quantity"] * low_stock_df["Price"]
+    st.subheader("⚠️ Low Stock Alert")
 
-# Show only Restock Quantity and relevant info in table
-st.subheader("⚠️ Low Stock Alert")
-st.dataframe(
-    low_stock_df[["Item", "Category", "Restock Quantity", "Price", "Restock Value (RM)"]],
-    use_container_width=True
-)
-    
-# Show total cost for restocking all low stock items
-total_restock_value = low_stock_df["Restock Value (RM)"].sum()
-st.metric("💸 Total Restock Cost", f"RM{total_restock_value:,.2f}")
+    st.dataframe(
+        low_stock_df[
+            ["Item", "Category", "Restock Quantity", "Price", "Restock Value (RM)"]
+        ],
+        use_container_width=True
+    )
+
+    total_restock_value = low_stock_df["Restock Value (RM)"].sum()
+    st.metric("💸 Total Restock Cost", f"RM{total_restock_value:,.2f}")
+else:
+    st.success("🎉 All items are sufficiently stocked!")
 
