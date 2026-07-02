@@ -73,11 +73,20 @@ edited_df = st.data_editor(
 )
 
 # --- Auto-save any changes ---
-if not edited_df.equals(st.session_state.inventory):
-    st.session_state.inventory = edited_df
-    edited_df.to_excel(FILE, index=False)
-    st.success("✅ Changes saved automatically!")
 
+if st.button("💾 Save Changes"):
+
+    st.session_state.inventory = edited_df.copy()
+
+    save_df = edited_df.copy()
+
+    if "Value" in save_df.columns:
+        save_df = save_df.drop(columns=["Value"])
+
+    save_df.to_excel(FILE, index=False)
+
+    st.success("Saved!")
+    
 # --- Calculate inventory value ---
 df["Value"] = df["Stock"] * df["Price"]
 
